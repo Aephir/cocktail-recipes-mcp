@@ -1,0 +1,11 @@
+services:
+  cocktail-recipes-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cocktail-recipes-mcp:latest
+    env_file:
+      - .env
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
