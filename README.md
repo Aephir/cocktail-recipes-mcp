@@ -90,6 +90,75 @@ Compose example:
 docker compose up --build cocktail-recipes-mcp
 ```
 
+Note: `docker-compose.yml` reads values from environment variables. For local CLI usage, export them or place them in a local `.env` file before running `docker compose`.
+
+## Portainer Deployment (Recommended)
+
+Use this when you run both the cocktail app and this MCP server as containers.
+
+1. Deploy both services on the same Docker network.
+2. Set MCP environment variables in Portainer for the MCP service:
+   - `COCKTAIL_API_BASE_URL`
+   - `COCKTAIL_API_USERNAME`
+   - `COCKTAIL_API_PASSWORD`
+3. Use internal service URL for `COCKTAIL_API_BASE_URL` when possible, for example:
+   - `http://cocktail-app:3000`
+4. Start the cocktail app first, then start the MCP service.
+5. In Claude, call `api_capabilities` and `list_recipes` to validate connectivity.
+
+### Portainer Error: `.env not found`
+
+If you saw an error like `env file /data/compose/<id>/.env not found`, the stack was expecting a physical `.env` file inside Portainer's compose directory.
+
+This repo now avoids that requirement by reading `COCKTAIL_API_*` from stack environment variables directly.
+
+In Portainer Stack deployment:
+- Add these variables in the Stack `Environment variables` UI:
+  - `COCKTAIL_API_BASE_URL`
+  - `COCKTAIL_API_USERNAME`
+  - `COCKTAIL_API_PASSWORD`
+- Redeploy the stack.
+
+Your example values are valid for this setup.
+
+### FQDN vs Internal URL
+
+- If MCP and cocktail app are in the same Docker network, prefer internal URL (`http://service-name:port`).
+- If MCP is outside that network, use a reachable external URL/FQDN (for example `https://cocktails.example.com`).
+
+### Example Portainer Stack Snippet
+
+```yaml
+services:
+  cocktail-recipes-mcp:
+    image: cocktail-recipes-mcp:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      COCKTAIL_API_BASE_URL: http://cocktail-app:3000
+      COCKTAIL_API_USERNAME: admin
+      COCKTAIL_API_PASSWORD: change-me
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    networks:
+      - cocktail_net
+
+networks:
+  cocktail_net:
+    external: true
+```
+
+### Go-Live Checklist
+
+1. MCP and app containers share a network.
+2. MCP env vars are set in Portainer.
+3. Login endpoint is reachable from MCP (`POST /api/auth/login`).
+4. `api_capabilities` succeeds.
+5. `list_recipes` succeeds.
+6. For admin operations, run `dry_run=true` first and apply only with `dry_run=false`.
+
 ## Claude Desktop Connection
 
 Add an MCP server entry to your Claude Desktop config.
