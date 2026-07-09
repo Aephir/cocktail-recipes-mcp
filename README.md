@@ -134,6 +134,16 @@ In Portainer Stack deployment:
 
 Your example values are valid for this setup.
 
+### Portainer Error: `pull access denied for cocktail-recipes-mcp`
+
+This happens when Portainer tries to pull `cocktail-recipes-mcp:latest` from a registry.
+This project is intended to build from source in the stack, not pull from Docker Hub.
+
+Resolution:
+- Use the current compose file from this repo (it uses `build` and `pull_policy: never`).
+- In Portainer stack deployment, disable any "pull latest image" behavior for this stack.
+- Redeploy the stack so the image is built locally on the Docker host.
+
 ### FQDN vs Internal URL
 
 - If MCP and cocktail app are in the same Docker network, prefer internal URL (`http://service-name:port`).
