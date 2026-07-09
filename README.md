@@ -100,7 +100,6 @@ docker compose up --build cocktail-recipes-mcp
 Note: `docker-compose.yml` reads values from environment variables. For local CLI usage, export them or place them in a local `.env` file before running `docker compose`.
 
 For remote clients, set `MCP_TRANSPORT=streamable-http` and publish `MCP_HTTP_PUBLISH_PORT`.
-
 ## Portainer Deployment (Recommended)
 
 Use this when you run both the cocktail app and this MCP server as containers.
@@ -143,7 +142,6 @@ Your example values are valid for this setup.
 For MCP client access:
 - Same LAN/VPN: `http://<host-ip>:<published-port><MCP_HTTP_PATH>`
 - Internet-facing: put SWAG/Nginx in front and use `https://<fqdn><MCP_HTTP_PATH>`
-
 ### Example Portainer Stack Snippet
 
 ```yaml
