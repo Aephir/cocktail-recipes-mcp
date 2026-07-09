@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +23,19 @@ class Settings(BaseSettings):
     mcp_http_host: str = Field("0.0.0.0", alias="MCP_HTTP_HOST")
     mcp_http_port: int = Field(8000, alias="MCP_HTTP_PORT")
     mcp_http_path: str = Field("/mcp", alias="MCP_HTTP_PATH")
+    mcp_http_bearer_token: str | None = Field(None, alias="MCP_HTTP_BEARER_TOKEN")
+    mcp_http_basic_username: str | None = Field(None, alias="MCP_HTTP_BASIC_USERNAME")
+    mcp_http_basic_password: str | None = Field(None, alias="MCP_HTTP_BASIC_PASSWORD")
+
+    @model_validator(mode="after")
+    def validate_basic_auth_pair(self) -> "Settings":
+        user_set = bool(self.mcp_http_basic_username)
+        pass_set = bool(self.mcp_http_basic_password)
+        if user_set != pass_set:
+            raise ValueError(
+                "MCP_HTTP_BASIC_USERNAME and MCP_HTTP_BASIC_PASSWORD must both be set or both be unset"
+            )
+        return self
 
 
 @lru_cache(maxsize=1)

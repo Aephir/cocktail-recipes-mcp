@@ -59,6 +59,25 @@ Optional variables are in `.env.example`.
 
 For Claude running on a different machine, use `streamable-http`.
 
+## HTTP Endpoint Security
+
+By default, the HTTP MCP endpoint is open if reachable. For production use, enable one of these:
+
+- Basic Auth (recommended for Claude custom connector UI)
+- Bearer token (good for service-to-service clients)
+
+Environment variables:
+
+- `MCP_HTTP_BASIC_USERNAME`
+- `MCP_HTTP_BASIC_PASSWORD`
+- `MCP_HTTP_BEARER_TOKEN`
+
+Notes:
+
+- If `MCP_HTTP_BASIC_USERNAME` is set, `MCP_HTTP_BASIC_PASSWORD` must also be set.
+- You can enable both; either valid auth method is accepted.
+- These credentials protect access to the MCP endpoint itself. They are separate from `COCKTAIL_API_*` credentials used by the MCP server to authenticate to your app API.
+
 ## Local Run
 
 1. Create env file:
@@ -114,6 +133,8 @@ Use this when you run both the cocktail app and this MCP server as containers.
   - `MCP_HTTP_PORT=8000`
   - `MCP_HTTP_PATH=/mcp`
   - `MCP_HTTP_PUBLISH_PORT=8000` (or another host port)
+  - `MCP_HTTP_BASIC_USERNAME=<set a strong username>`
+  - `MCP_HTTP_BASIC_PASSWORD=<set a strong password>`
 3. Use internal service URL for `COCKTAIL_API_BASE_URL` when possible, for example:
    - `http://cocktail-app:3000`
 4. Start the cocktail app first, then start the MCP service.
@@ -241,6 +262,12 @@ When running in Portainer with `MCP_TRANSPORT=streamable-http`, use your reachab
 - SWAG/FQDN example: `https://mcp.example.com/mcp`
 
 If your Claude client supports URL-based MCP servers, register this URL there.
+
+For Claude custom connector setup:
+
+- URL must include `/mcp`.
+- If Basic Auth is enabled, enter `MCP_HTTP_BASIC_USERNAME` and `MCP_HTTP_BASIC_PASSWORD` in Advanced settings.
+- Do not enter `COCKTAIL_API_USERNAME` and `COCKTAIL_API_PASSWORD` in Claude; those stay only in the MCP container environment.
 
 ## Tests
 
