@@ -4,8 +4,10 @@ services:
       context: .
       dockerfile: Dockerfile
     image: cocktail-recipes-mcp:latest
-    env_file:
-      - .env
+    environment:
+      COCKTAIL_API_BASE_URL: ${COCKTAIL_API_BASE_URL}
+      COCKTAIL_API_USERNAME: ${COCKTAIL_API_USERNAME}
+      COCKTAIL_API_PASSWORD: ${COCKTAIL_API_PASSWORD}
     restart: unless-stopped
     stdin_open: true
     tty: true
