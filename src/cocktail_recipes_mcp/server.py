@@ -15,6 +15,11 @@ def build_server() -> FastMCP:
     service = CocktailService(client)
     op_log = OperationLog(max_size=settings.mcp_operation_log_size)
 
-    mcp = FastMCP(name=settings.mcp_server_name)
+    mcp = FastMCP(
+        name=settings.mcp_server_name,
+        host=settings.mcp_http_host,
+        port=settings.mcp_http_port,
+        streamable_http_path=settings.mcp_http_path,
+    )
     register_tools(mcp, service, op_log)
     return mcp

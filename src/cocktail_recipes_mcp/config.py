@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,6 +19,10 @@ class Settings(BaseSettings):
     mcp_operation_log_size: int = Field(200, alias="MCP_OPERATION_LOG_SIZE")
     mcp_server_name: str = Field("cocktail-recipes-mcp", alias="MCP_SERVER_NAME")
     mcp_server_version: str = Field("0.1.0", alias="MCP_SERVER_VERSION")
+    mcp_transport: Literal["stdio", "streamable-http"] = Field("stdio", alias="MCP_TRANSPORT")
+    mcp_http_host: str = Field("0.0.0.0", alias="MCP_HTTP_HOST")
+    mcp_http_port: int = Field(8000, alias="MCP_HTTP_PORT")
+    mcp_http_path: str = Field("/mcp", alias="MCP_HTTP_PATH")
 
 
 @lru_cache(maxsize=1)

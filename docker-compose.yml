@@ -8,6 +8,12 @@ services:
       COCKTAIL_API_BASE_URL: ${COCKTAIL_API_BASE_URL}
       COCKTAIL_API_USERNAME: ${COCKTAIL_API_USERNAME}
       COCKTAIL_API_PASSWORD: ${COCKTAIL_API_PASSWORD}
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-streamable-http}
+      MCP_HTTP_HOST: ${MCP_HTTP_HOST:-0.0.0.0}
+      MCP_HTTP_PORT: ${MCP_HTTP_PORT:-8000}
+      MCP_HTTP_PATH: ${MCP_HTTP_PATH:-/mcp}
+    ports:
+      - "${MCP_HTTP_PUBLISH_PORT:-8000}:${MCP_HTTP_PORT:-8000}"
     restart: unless-stopped
     stdin_open: true
     tty: true
