@@ -52,6 +52,13 @@ If backend admin endpoints are not available yet, tool responses return structur
 
 Optional variables are in `.env.example`.
 
+## Transport Modes
+
+- `stdio` (default in `.env.example`): process-local MCP over stdin/stdout, no published port.
+- `streamable-http`: network-reachable MCP over HTTP, requires a published port or reverse proxy.
+
+For Claude running on a different machine, use `streamable-http`.
+
 ## Local Run
 
 1. Create env file:
@@ -92,6 +99,7 @@ docker compose up --build cocktail-recipes-mcp
 
 Note: `docker-compose.yml` reads values from environment variables. For local CLI usage, export them or place them in a local `.env` file before running `docker compose`.
 
+For remote clients, set `MCP_TRANSPORT=streamable-http` and publish `MCP_HTTP_PUBLISH_PORT`.
 ## Portainer Deployment (Recommended)
 
 Use this when you run both the cocktail app and this MCP server as containers.
@@ -101,6 +109,11 @@ Use this when you run both the cocktail app and this MCP server as containers.
    - `COCKTAIL_API_BASE_URL`
    - `COCKTAIL_API_USERNAME`
    - `COCKTAIL_API_PASSWORD`
+  - `MCP_TRANSPORT=streamable-http`
+  - `MCP_HTTP_HOST=0.0.0.0`
+  - `MCP_HTTP_PORT=8000`
+  - `MCP_HTTP_PATH=/mcp`
+  - `MCP_HTTP_PUBLISH_PORT=8000` (or another host port)
 3. Use internal service URL for `COCKTAIL_API_BASE_URL` when possible, for example:
    - `http://cocktail-app:3000`
 4. Start the cocktail app first, then start the MCP service.
@@ -126,6 +139,9 @@ Your example values are valid for this setup.
 - If MCP and cocktail app are in the same Docker network, prefer internal URL (`http://service-name:port`).
 - If MCP is outside that network, use a reachable external URL/FQDN (for example `https://cocktails.example.com`).
 
+For MCP client access:
+- Same LAN/VPN: `http://<host-ip>:<published-port><MCP_HTTP_PATH>`
+- Internet-facing: put SWAG/Nginx in front and use `https://<fqdn><MCP_HTTP_PATH>`
 ### Example Portainer Stack Snippet
 
 ```yaml
@@ -139,6 +155,12 @@ services:
       COCKTAIL_API_BASE_URL: http://cocktail-app:3000
       COCKTAIL_API_USERNAME: admin
       COCKTAIL_API_PASSWORD: change-me
+      MCP_TRANSPORT: streamable-http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 8000
+      MCP_HTTP_PATH: /mcp
+    ports:
+      - "8000:8000"
     restart: unless-stopped
     stdin_open: true
     tty: true
@@ -200,6 +222,15 @@ Add an MCP server entry to your Claude Desktop config.
   }
 }
 ```
+
+### Remote HTTP MCP (different machine)
+
+When running in Portainer with `MCP_TRANSPORT=streamable-http`, use your reachable URL:
+
+- Direct host/port example: `http://10.0.30.51:8000/mcp`
+- SWAG/FQDN example: `https://mcp.example.com/mcp`
+
+If your Claude client supports URL-based MCP servers, register this URL there.
 
 ## Tests
 
