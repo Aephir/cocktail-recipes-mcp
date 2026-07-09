@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: cocktail-recipes-mcp:latest
+    pull_policy: never
     environment:
       COCKTAIL_API_BASE_URL: ${COCKTAIL_API_BASE_URL}
       COCKTAIL_API_USERNAME: ${COCKTAIL_API_USERNAME}
