@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +23,30 @@ class Settings(BaseSettings):
     mcp_http_host: str = Field("0.0.0.0", alias="MCP_HTTP_HOST")
     mcp_http_port: int = Field(8000, alias="MCP_HTTP_PORT")
     mcp_http_path: str = Field("/mcp", alias="MCP_HTTP_PATH")
+    public_base_url: str | None = Field(None, alias="PUBLIC_BASE_URL")
+    auth_username: str | None = Field(None, alias="AUTH_USERNAME")
+    auth_password: str | None = Field(None, alias="AUTH_PASSWORD")
+    oauth_access_token_ttl_seconds: int = Field(3600, alias="OAUTH_ACCESS_TOKEN_TTL_SECONDS")
+    oauth_refresh_token_ttl_seconds: int = Field(2592000, alias="OAUTH_REFRESH_TOKEN_TTL_SECONDS")
+    oauth_authorization_code_ttl_seconds: int = Field(600, alias="OAUTH_AUTHORIZATION_CODE_TTL_SECONDS")
+    oauth_storage_dir: str = Field("/data/oauth", alias="OAUTH_STORAGE_DIR")
+    oauth_jwt_key_path: str = Field("/data/oauth/jwt_signing_key.pem", alias="OAUTH_JWT_KEY_PATH")
+    oauth_client_redirect_allowlist: str | None = Field(None, alias="OAUTH_CLIENT_REDIRECT_ALLOWLIST")
+
+    @model_validator(mode="after")
+    def validate_oauth_settings(self) -> "Settings":
+        oauth_user_set = bool(self.auth_username)
+        oauth_pass_set = bool(self.auth_password)
+        if oauth_user_set != oauth_pass_set:
+            raise ValueError("AUTH_USERNAME and AUTH_PASSWORD must both be set or both be unset")
+
+        if self.mcp_transport == "streamable-http":
+            if not self.public_base_url:
+                raise ValueError("PUBLIC_BASE_URL must be set when MCP_TRANSPORT=streamable-http")
+            if not oauth_user_set:
+                raise ValueError("AUTH_USERNAME and AUTH_PASSWORD must be set when MCP_TRANSPORT=streamable-http")
+
+        return self
 
 
 @lru_cache(maxsize=1)
