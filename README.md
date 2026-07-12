@@ -50,7 +50,18 @@ Each destructive tool returns:
 - `apply_executed` boolean
 - backend result payload
 
+Apply integrity guard:
+
+- If a tool is called with `dry_run=false` but the backend responds with `dry_run=true`, MCP returns an error (`apply_not_executed`) instead of success.
+- If the backend explicitly reports zero changed rows/ids for an apply request, MCP returns an error (`apply_not_executed`) so silent no-ops are surfaced.
+
 If backend admin endpoints are not available yet, tool responses return structured `not_implemented` with an actionable message.
+
+Recipe update safety:
+
+- `update_recipe` now uses fetch-merge-send behavior on apply: MCP first reads the current recipe, merges your provided fields, and sends a full update payload.
+- This prevents accidental clearing of `tools` or `garnishes` when those fields are omitted from the request.
+- To intentionally clear a list field, pass it explicitly as an empty list.
 
 Delete safeguards for ingredients/tools:
 
