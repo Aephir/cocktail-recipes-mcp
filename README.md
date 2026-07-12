@@ -147,26 +147,73 @@ For remote clients, set `MCP_TRANSPORT=streamable-http`, configure `PUBLIC_BASE_
 
 Use this when you run both the cocktail app and this MCP server as containers.
 
-1. Deploy both services on the same Docker network.
-2. Set MCP environment variables in Portainer for the MCP service:
-   - `COCKTAIL_API_BASE_URL`
-   - `COCKTAIL_API_USERNAME`
-   - `COCKTAIL_API_PASSWORD`
-  - `MCP_TRANSPORT=streamable-http`
-  - `MCP_HTTP_HOST=0.0.0.0`
-  - `MCP_HTTP_PORT=8000`
-  - `MCP_HTTP_PATH=/mcp`
-  - `MCP_HTTP_PUBLISH_PORT=8000` (or another host port)
-  - `PUBLIC_BASE_URL=https://cocktail-mcp.example.com`
-  - `AUTH_USERNAME=<connector login username>`
-  - `AUTH_PASSWORD=<connector login password>`
-  - `OAUTH_STORAGE_DIR=/data/oauth`
-  - `OAUTH_STORAGE_HOST_DIR=/mnt/storage_1/docker/cocktail-recipes-mcp/oauth`
-3. Add a persistent host-path mount for `/data/oauth` so keys, registered clients, and refresh tokens survive redeploys.
-4. Use internal service URL for `COCKTAIL_API_BASE_URL` when possible, for example:
-   - `http://cocktail-app:3000`
-5. Start the cocktail app first, then start the MCP service.
-6. In Claude, add a custom connector pointing to `https://<your-fqdn>/mcp`.
+For Portainer "Create stack from repository":
+
+- Keep all compose YAML in this repository.
+- Do not add manual YAML overrides in the Portainer UI.
+- Set Stack environment variables in the UI using the table below.
+
+### Portainer Stack Environment Variables
+
+When both stacks share the same external Docker network (`cocktail_net`), use the app service name in `COCKTAIL_API_BASE_URL`.
+
+| Key | Example value | Required | Notes |
+| --- | --- | --- | --- |
+| `COCKTAIL_API_BASE_URL` | `http://cocktail-app:3000` | Yes | Use service-name URL on shared Docker network. |
+| `COCKTAIL_API_USERNAME` | `admin` | Yes | Cocktail app login username. |
+| `COCKTAIL_API_PASSWORD` | `change-me` | Yes | Cocktail app login password. |
+| `MCP_TRANSPORT` | `streamable-http` | Yes (remote Claude) | Use `stdio` only for local process clients. |
+| `MCP_HTTP_HOST` | `0.0.0.0` | Yes (remote Claude) | Container bind address. |
+| `MCP_HTTP_PORT` | `8000` | Yes (remote Claude) | Internal container port. |
+| `MCP_HTTP_PATH` | `/mcp` | Yes (remote Claude) | MCP endpoint path. |
+| `MCP_HTTP_PUBLISH_PORT` | `8011` | Yes (remote Claude) | Host-published port. |
+| `PUBLIC_BASE_URL` | `https://cocktail-mcp.example.com` | Yes (remote Claude) | Public HTTPS origin used by OAuth metadata. |
+| `AUTH_USERNAME` | `connector-admin` | Yes (remote Claude) | Login used on OAuth consent screen. Set anything, then use the same when logging in from Claude |
+| `AUTH_PASSWORD` | `change-me` | Yes (remote Claude) | Password for the connector login above. Set anything, then use the same when logging in from Claude |
+| `OAUTH_STORAGE_DIR` | `/data/oauth` | Recommended | Keep as shown unless you changed image internals. |
+| `OAUTH_STORAGE_HOST_DIR` | `/mnt/storage_1/docker/cocktail-recipes-mcp/oauth` | Recommended | Host path for persisted OAuth keys/tokens. |
+
+Then:
+
+1. Ensure the host path in `OAUTH_STORAGE_HOST_DIR` exists and is writable by Docker.
+2. Deploy/redeploy the stack in Portainer.
+3. In Claude, add a custom connector pointing to `https://<your-fqdn>/mcp`.
+
+### Portainer Error: `PermissionError: [Errno 13] Permission denied: '/data/oauth/jwt_signing_key.pem'`
+
+Cause:
+
+- The container runs as a non-root user (`appuser`).
+- The bind-mounted host directory from `OAUTH_STORAGE_HOST_DIR` is not writable by that user.
+
+Fix on the Docker host:
+
+1. Create the directory if needed:
+
+```bash
+sudo mkdir -p /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
+```
+
+2. Confirm container UID/GID for `appuser`:
+
+```bash
+docker run --rm --entrypoint sh cocktail-recipes-mcp:latest -c 'id -u appuser; id -g appuser'
+```
+
+3. Set ownership using that output. Example if UID is `100` and GID is `101`:
+
+```bash
+sudo chown -R 100:101 /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
+sudo chmod -R u+rwX,g+rwX /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
+```
+
+4. Redeploy the stack.
+
+Quick test fallback (not for long-term use):
+
+```bash
+sudo chmod -R 777 /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
+```
 
 ### Portainer Error: `.env not found`
 
