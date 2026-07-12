@@ -104,7 +104,8 @@
     },
     {
       "methods": [
-        "PUT"
+        "PUT",
+        "PATCH"
       ],
       "path": "/api/admin/ingredients/<int:iid>"
     },
@@ -122,6 +123,12 @@
     },
     {
       "methods": [
+        "POST"
+      ],
+      "path": "/api/admin/ingredients/<int:iid>/replace-with/<int:target_id>"
+    },
+    {
+      "methods": [
         "GET"
       ],
       "path": "/api/tools"
@@ -134,7 +141,8 @@
     },
     {
       "methods": [
-        "PUT"
+        "PUT",
+        "PATCH"
       ],
       "path": "/api/admin/tools/<int:tid>"
     },
@@ -172,9 +180,9 @@
   "files": {
     "README.md": "4b215b139225bda6c21d2fa2011015642b5756c1dc30a629e4fc165151bb0932",
     "VERSION": "1f2110568627307becae713f8b808f3d9d912d4b2a24ed6a78605f03f7437d3c",
-    "app.py": "3b5bb35a1832b8ca31d68f29207284b443a8d4721f3fdfdf1b3aea3a0d294e92"
+    "app.py": "28deb916563caf8a249653c54344cd3fd2b8a4c683a34eda0dc4250956d79837"
   },
-  "generated_at": "2026-07-12T13:39:55.964683+00:00",
+  "generated_at": "2026-07-12T18:33:05.577580+00:00",
   "mcp_capabilities": {
     "dry_run_mutations": true,
     "ingredient_merge": true,
@@ -184,7 +192,7 @@
   },
   "schemas": {
     "import-upsert.schema.json": "42ecb54150f1b269942d4a329af432b7c5eee8b21f08eddf95d8356eb3c39307",
-    "recipe-api.schema.json": "3f27d947a020e31c21e41fde7cd965868133b079829989476e75196d44cded67"
+    "recipe-api.schema.json": "4b303a4c06ebe5a5dec0bde7ebf31ac62bb2d96a0243beda02a8dfff379c734c"
   },
   "source_repo": "Aephir/cocktail-recipes",
   "version": "0.1.6"
