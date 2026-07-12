@@ -252,6 +252,79 @@ Resolution:
 For MCP client access:
 - Same LAN/VPN: `http://<host-ip>:<published-port><MCP_HTTP_PATH>`
 - Internet-facing: put SWAG/Nginx in front and use `https://<fqdn><MCP_HTTP_PATH>`
+
+### SWAG Nginx Config (Redacted Template)
+
+Use this as a template for SWAG when proxying to an MCP host IP and published port.
+Replace placeholder values with your own environment values.
+
+```nginx
+# /config/nginx/site-confs/cocktail-mcp.conf
+
+server {
+  listen 443 ssl http2;
+  server_name mcp.example.com;
+
+  include /config/nginx/ssl.conf;
+  include /config/nginx/proxy.conf;
+
+  client_max_body_size 0;
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "no-referrer" always;
+
+  # SWAG not on shared Docker network: use MCP host IP + published port.
+  set $mcp_upstream http://192.168.1.50:8011;
+
+  # OAuth discovery endpoints + JWKS
+  location ~ ^/\.well-known/(oauth-authorization-server|oauth-protected-resource|jwks\.json)$ {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Authorization $http_authorization;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_read_timeout 3600;
+    proxy_send_timeout 3600;
+    proxy_pass $mcp_upstream;
+  }
+
+  # MCP and OAuth flow endpoints
+  location ~ ^/(mcp|register|authorize|token|oauth/login|oauth/consent)$ {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Authorization $http_authorization;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_read_timeout 3600;
+    proxy_send_timeout 3600;
+    proxy_pass $mcp_upstream;
+  }
+
+  location = /healthz {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass $mcp_upstream/healthz;
+  }
+
+  location / {
+    return 404;
+  }
+}
+```
+
+Expected quick checks:
+
+- `GET /.well-known/oauth-authorization-server` returns `200`
+- `GET /.well-known/oauth-protected-resource` returns `200`
+- `GET /mcp` without token returns `401`
+
 ### Example Portainer Stack Snippet
 
 ```yaml
