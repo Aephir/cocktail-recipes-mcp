@@ -7,6 +7,7 @@ This server is designed for Claude Desktop and other MCP clients. It authenticat
 ## Features
 
 - Python 3.11 MCP server with typed models and validation
+- Self-contained OAuth 2.1 authorization server for remote Claude connectors
 - Session-cookie auth with automatic re-login on `401`
 - Safe retries for idempotent calls (read-only and dry-run operations)
 - No blind retries for non-idempotent apply calls
@@ -49,15 +50,57 @@ If backend admin endpoints are not available yet, tool responses return structur
 - `COCKTAIL_API_BASE_URL`
 - `COCKTAIL_API_USERNAME`
 - `COCKTAIL_API_PASSWORD`
+- `PUBLIC_BASE_URL` when using `streamable-http`
+- `AUTH_USERNAME` when using `streamable-http`
+- `AUTH_PASSWORD` when using `streamable-http`
+- `OAUTH_STORAGE_HOST_DIR` when using a host-path mount for OAuth state
 
 Optional variables are in `.env.example`.
 
 ## Transport Modes
 
 - `stdio` (default in `.env.example`): process-local MCP over stdin/stdout, no published port.
-- `streamable-http`: network-reachable MCP over HTTP, requires a published port or reverse proxy.
+- `streamable-http`: network-reachable MCP over HTTP with embedded OAuth 2.1, requires a published port or reverse proxy.
 
 For Claude running on a different machine, use `streamable-http`.
+
+## Embedded OAuth
+
+When `MCP_TRANSPORT=streamable-http`, this container acts as both:
+
+- the OAuth authorization server
+- the OAuth-protected MCP resource server
+
+Implemented endpoints:
+
+- `GET /.well-known/oauth-authorization-server`
+- `GET /.well-known/oauth-protected-resource`
+- `GET /.well-known/jwks.json`
+- `POST /register`
+- `GET|POST /authorize`
+- `POST /token`
+- `POST|GET /mcp` protected by `Authorization: Bearer <token>`
+
+OAuth details:
+
+- Authorization Code flow with PKCE (`S256` required)
+- Dynamic Client Registration for public clients (`token_endpoint_auth_method: none`)
+- Built-in login form and consent screen using `AUTH_USERNAME` and `AUTH_PASSWORD`
+- JWT access tokens signed by a persisted RSA key
+- Rotating refresh tokens for public clients
+
+Persisted OAuth state:
+
+- signing key
+- registered clients
+- authorization codes
+- refresh tokens
+
+If you want this state to live on the host filesystem, mount a directory such as:
+
+- `/mnt/storage_1/docker/cocktail-recipes-mcp/oauth`
+
+Keep `OAUTH_STORAGE_DIR=/data/oauth` inside the container and set `OAUTH_STORAGE_HOST_DIR` to the host path above in Portainer or compose.
 
 ## Local Run
 
@@ -99,7 +142,7 @@ docker compose up --build cocktail-recipes-mcp
 
 Note: `docker-compose.yml` reads values from environment variables. For local CLI usage, export them or place them in a local `.env` file before running `docker compose`.
 
-For remote clients, set `MCP_TRANSPORT=streamable-http` and publish `MCP_HTTP_PUBLISH_PORT`.
+For remote clients, set `MCP_TRANSPORT=streamable-http`, configure `PUBLIC_BASE_URL`, `AUTH_USERNAME`, `AUTH_PASSWORD`, and publish `MCP_HTTP_PUBLISH_PORT`.
 ## Portainer Deployment (Recommended)
 
 Use this when you run both the cocktail app and this MCP server as containers.
@@ -114,10 +157,16 @@ Use this when you run both the cocktail app and this MCP server as containers.
   - `MCP_HTTP_PORT=8000`
   - `MCP_HTTP_PATH=/mcp`
   - `MCP_HTTP_PUBLISH_PORT=8000` (or another host port)
-3. Use internal service URL for `COCKTAIL_API_BASE_URL` when possible, for example:
+  - `PUBLIC_BASE_URL=https://cocktail-mcp.example.com`
+  - `AUTH_USERNAME=<connector login username>`
+  - `AUTH_PASSWORD=<connector login password>`
+  - `OAUTH_STORAGE_DIR=/data/oauth`
+  - `OAUTH_STORAGE_HOST_DIR=/mnt/storage_1/docker/cocktail-recipes-mcp/oauth`
+3. Add a persistent host-path mount for `/data/oauth` so keys, registered clients, and refresh tokens survive redeploys.
+4. Use internal service URL for `COCKTAIL_API_BASE_URL` when possible, for example:
    - `http://cocktail-app:3000`
-4. Start the cocktail app first, then start the MCP service.
-5. In Claude, call `api_capabilities` and `list_recipes` to validate connectivity.
+5. Start the cocktail app first, then start the MCP service.
+6. In Claude, add a custom connector pointing to `https://<your-fqdn>/mcp`.
 
 ### Portainer Error: `.env not found`
 
@@ -130,6 +179,10 @@ In Portainer Stack deployment:
   - `COCKTAIL_API_BASE_URL`
   - `COCKTAIL_API_USERNAME`
   - `COCKTAIL_API_PASSWORD`
+  - `PUBLIC_BASE_URL`
+  - `AUTH_USERNAME`
+  - `AUTH_PASSWORD`
+  - `OAUTH_STORAGE_HOST_DIR`
 - Redeploy the stack.
 
 Your example values are valid for this setup.
@@ -169,8 +222,15 @@ services:
       MCP_HTTP_HOST: 0.0.0.0
       MCP_HTTP_PORT: 8000
       MCP_HTTP_PATH: /mcp
+      PUBLIC_BASE_URL: https://cocktail-mcp.example.com
+      AUTH_USERNAME: connector-admin
+      AUTH_PASSWORD: change-me
+      OAUTH_STORAGE_DIR: /data/oauth
+      OAUTH_STORAGE_HOST_DIR: /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
     ports:
       - "8000:8000"
+    volumes:
+      - /mnt/storage_1/docker/cocktail-recipes-mcp/oauth:/data/oauth
     restart: unless-stopped
     stdin_open: true
     tty: true
@@ -185,11 +245,13 @@ networks:
 ### Go-Live Checklist
 
 1. MCP and app containers share a network.
-2. MCP env vars are set in Portainer.
+2. MCP env vars are set in Portainer, including `PUBLIC_BASE_URL`, `AUTH_USERNAME`, and `AUTH_PASSWORD`.
 3. Login endpoint is reachable from MCP (`POST /api/auth/login`).
-4. `api_capabilities` succeeds.
-5. `list_recipes` succeeds.
-6. For admin operations, run `dry_run=true` first and apply only with `dry_run=false`.
+4. OAuth state host path is mounted to `/data/oauth`.
+5. `GET /.well-known/oauth-authorization-server` succeeds.
+6. `GET /.well-known/oauth-protected-resource` succeeds.
+7. Unauthenticated `GET /mcp` returns `401` with `WWW-Authenticate` pointing at protected-resource metadata.
+8. For admin operations, run `dry_run=true` first and apply only with `dry_run=false`.
 
 ## Claude Desktop Connection
 
@@ -240,7 +302,14 @@ When running in Portainer with `MCP_TRANSPORT=streamable-http`, use your reachab
 - Direct host/port example: `http://10.0.30.51:8000/mcp`
 - SWAG/FQDN example: `https://mcp.example.com/mcp`
 
-If your Claude client supports URL-based MCP servers, register this URL there.
+For Claude custom connector setup:
+
+- URL: `https://mcp.example.com/mcp`
+- Leave `OAuth Client ID` empty.
+- Leave `OAuth Client Secret` empty.
+- Claude should dynamically register as a public client and complete OAuth against this server.
+
+Do not put `COCKTAIL_API_USERNAME` or `COCKTAIL_API_PASSWORD` into Claude. Those remain server-side only.
 
 ## Tests
 
@@ -249,6 +318,35 @@ Run minimal tests:
 ```bash
 pytest
 ```
+
+## Manual Verification
+
+Discovery endpoints:
+
+```bash
+curl -i https://cocktail-mcp.example.com/.well-known/oauth-authorization-server
+curl -i https://cocktail-mcp.example.com/.well-known/oauth-protected-resource
+curl -i https://cocktail-mcp.example.com/.well-known/jwks.json
+```
+
+Protected MCP endpoint without a token:
+
+```bash
+curl -i https://cocktail-mcp.example.com/mcp
+```
+
+Expected result:
+
+- `401 Unauthorized`
+- `WWW-Authenticate: Bearer ... resource_metadata="https://cocktail-mcp.example.com/.well-known/oauth-protected-resource"`
+
+Automated tests now cover:
+
+- metadata discovery
+- dynamic client registration
+- authorization code flow with PKCE
+- refresh token rotation
+- `/mcp` bearer protection
 
 ## Example Transcript
 
