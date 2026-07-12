@@ -46,3 +46,82 @@ def test_merge_ingredients_dry_run_and_apply_flags() -> None:
 
     assert fake.calls[1]["idempotent"] is False
     assert fake.calls[1]["json"]["dry_run"] is False
+
+
+def test_create_ingredient_dry_run_and_apply_flags() -> None:
+    fake = FakeClient()
+    service = CocktailService(client=fake)
+
+    preview = service.create_ingredient(name="Lime")
+    applied = service.create_ingredient(name="Lime", dry_run=False)
+
+    assert preview["apply_executed"] is False
+    assert preview["preview"]["dry_run"] is True
+    assert applied["apply_executed"] is True
+    assert fake.calls[-1]["path"] == "/api/admin/ingredients"
+
+
+def test_delete_ingredient_blocks_apply_when_referenced_and_not_forced() -> None:
+    class RefClient(FakeClient):
+        def request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any] | list[dict[str, Any]]:
+            if method == "GET" and path == "/api/recipes":
+                return [
+                    {
+                        "id": 1,
+                        "name": "Daiquiri",
+                        "ingredients": [{"ingredient_id": 7, "ingredient_name": "Lime"}],
+                    }
+                ]
+            return super().request(method, path, **kwargs)
+
+    fake = RefClient()
+    service = CocktailService(client=fake)
+
+    result = service.delete_ingredient(ingredient_id=7, dry_run=False, force=False)
+
+    assert result["apply_executed"] is False
+    assert result["blocked"] is True
+    assert result["preview"]["warning"]["details"]["reference_count"] == 1
+    assert all(call["method"] != "DELETE" for call in fake.calls)
+
+
+def test_delete_tool_force_applies_even_when_referenced() -> None:
+    class RefClient(FakeClient):
+        def request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any] | list[dict[str, Any]]:
+            if method == "GET" and path == "/api/recipes":
+                return [
+                    {
+                        "id": 2,
+                        "name": "Old Fashioned",
+                        "tools": [{"tool_id": 3, "tool_name": "Mixing Glass"}],
+                    }
+                ]
+            return super().request(method, path, **kwargs)
+
+    fake = RefClient()
+    service = CocktailService(client=fake)
+
+    result = service.delete_tool(tool_id=3, dry_run=False, force=True)
+
+    assert result["apply_executed"] is True
+    assert any(call["method"] == "DELETE" and call["path"] == "/api/admin/tools/3" for call in fake.calls)
+
+
+def test_bulk_update_recipes_dry_run_and_apply_flags() -> None:
+    fake = FakeClient()
+    service = CocktailService(client=fake)
+
+    filters = {"apply_all": False, "recipe_ids": [1, 2]}
+    updates = {"tags_add": ["citrus"]}
+
+    preview = service.bulk_update_recipes(filters=filters, updates=updates, dry_run=True)
+    applied = service.bulk_update_recipes(filters=filters, updates=updates, dry_run=False)
+
+    assert preview["apply_executed"] is False
+    assert preview["preview"]["operation"] == "bulk_update_recipes"
+    assert fake.calls[0]["idempotent"] is True
+    assert fake.calls[0]["path"] == "/api/admin/recipes/bulk-update"
+
+    assert applied["apply_executed"] is True
+    assert fake.calls[1]["idempotent"] is False
+    assert fake.calls[1]["path"] == "/api/admin/recipes/bulk-update"
