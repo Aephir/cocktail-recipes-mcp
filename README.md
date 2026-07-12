@@ -45,6 +45,16 @@ Each destructive tool returns:
 
 If backend admin endpoints are not available yet, tool responses return structured `not_implemented` with an actionable message.
 
+## Tool Permission Hints
+
+This server publishes MCP tool annotations so clients can distinguish read-only tools from mutating tools for permission workflows.
+
+- Read-only tools (`readOnlyHint=true`): `list_recipes`, `get_recipe`, `list_ingredients`, `list_tools`, `operation_log_recent`, `api_capabilities`
+- Additive write tools (`readOnlyHint=false`, `destructiveHint=false`): `create_recipe`
+- Mutating/destructive tools (`readOnlyHint=false`, `destructiveHint=true`): `update_recipe`, `delete_recipe`, `merge_ingredients`, `merge_tools`, `recategorize_recipes`, `update_tags_bulk`
+
+In clients that support bulk approvals, this enables "always allow" for the read-only set while keeping mutating tools gated.
+
 ## Required Environment Variables
 
 - `COCKTAIL_API_BASE_URL`
