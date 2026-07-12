@@ -53,6 +53,7 @@ If backend admin endpoints are not available yet, tool responses return structur
 - `PUBLIC_BASE_URL` when using `streamable-http`
 - `AUTH_USERNAME` when using `streamable-http`
 - `AUTH_PASSWORD` when using `streamable-http`
+- `OAUTH_STORAGE_HOST_DIR` when using a host-path mount for OAuth state
 
 Optional variables are in `.env.example`.
 
@@ -94,6 +95,12 @@ Persisted OAuth state:
 - registered clients
 - authorization codes
 - refresh tokens
+
+If you want this state to live on the host filesystem, mount a directory such as:
+
+- `/mnt/storage_1/docker/cocktail-recipes-mcp/oauth`
+
+Keep `OAUTH_STORAGE_DIR=/data/oauth` inside the container and set `OAUTH_STORAGE_HOST_DIR` to the host path above in Portainer or compose.
 
 ## Local Run
 
@@ -154,7 +161,8 @@ Use this when you run both the cocktail app and this MCP server as containers.
   - `AUTH_USERNAME=<connector login username>`
   - `AUTH_PASSWORD=<connector login password>`
   - `OAUTH_STORAGE_DIR=/data/oauth`
-3. Add a persistent volume for `/data/oauth` so keys, registered clients, and refresh tokens survive redeploys.
+  - `OAUTH_STORAGE_HOST_DIR=/mnt/storage_1/docker/cocktail-recipes-mcp/oauth`
+3. Add a persistent host-path mount for `/data/oauth` so keys, registered clients, and refresh tokens survive redeploys.
 4. Use internal service URL for `COCKTAIL_API_BASE_URL` when possible, for example:
    - `http://cocktail-app:3000`
 5. Start the cocktail app first, then start the MCP service.
@@ -174,6 +182,7 @@ In Portainer Stack deployment:
   - `PUBLIC_BASE_URL`
   - `AUTH_USERNAME`
   - `AUTH_PASSWORD`
+  - `OAUTH_STORAGE_HOST_DIR`
 - Redeploy the stack.
 
 Your example values are valid for this setup.
@@ -217,10 +226,11 @@ services:
       AUTH_USERNAME: connector-admin
       AUTH_PASSWORD: change-me
       OAUTH_STORAGE_DIR: /data/oauth
+      OAUTH_STORAGE_HOST_DIR: /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
     ports:
       - "8000:8000"
     volumes:
-      - oauth_data:/data/oauth
+      - /mnt/storage_1/docker/cocktail-recipes-mcp/oauth:/data/oauth
     restart: unless-stopped
     stdin_open: true
     tty: true
@@ -230,9 +240,6 @@ services:
 networks:
   cocktail_net:
     external: true
-
-volumes:
-  oauth_data:
 ```
 
 ### Go-Live Checklist
@@ -240,7 +247,7 @@ volumes:
 1. MCP and app containers share a network.
 2. MCP env vars are set in Portainer, including `PUBLIC_BASE_URL`, `AUTH_USERNAME`, and `AUTH_PASSWORD`.
 3. Login endpoint is reachable from MCP (`POST /api/auth/login`).
-4. OAuth state volume is mounted.
+4. OAuth state host path is mounted to `/data/oauth`.
 5. `GET /.well-known/oauth-authorization-server` succeeds.
 6. `GET /.well-known/oauth-protected-resource` succeeds.
 7. Unauthenticated `GET /mcp` returns `401` with `WWW-Authenticate` pointing at protected-resource metadata.

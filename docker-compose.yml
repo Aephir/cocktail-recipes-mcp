@@ -24,7 +24,7 @@ services:
     ports:
       - "${MCP_HTTP_PUBLISH_PORT:-8000}:${MCP_HTTP_PORT:-8000}"
     volumes:
-      - oauth_data:${OAUTH_STORAGE_DIR:-/data/oauth}
+      - ${OAUTH_STORAGE_HOST_DIR:-oauth_data}:${OAUTH_STORAGE_DIR:-/data/oauth}
     restart: unless-stopped
     stdin_open: true
     tty: true
