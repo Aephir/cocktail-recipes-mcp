@@ -28,6 +28,12 @@ services:
     restart: unless-stopped
     stdin_open: true
     tty: true
+    networks:
+      - cocktail_net
 
 volumes:
   oauth_data:
+
+networks:
+  cocktail_net:
+    external: true
