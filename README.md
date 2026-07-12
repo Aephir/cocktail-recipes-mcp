@@ -34,6 +34,7 @@ This server is designed for Claude Desktop and other MCP clients. It authenticat
 - `merge_ingredients` (`dry_run=true` default)
 - `merge_tools` (`dry_run=true` default)
 - `recategorize_recipes` (`dry_run=true` default)
+- `bulk_update_recipes` (`dry_run=true` default)
 - `update_tags_bulk` (`dry_run=true` default)
 - `operation_log_recent`
 - `api_capabilities`
@@ -63,7 +64,7 @@ This server publishes MCP tool annotations so clients can distinguish read-only 
 
 - Read-only tools (`readOnlyHint=true`): `list_recipes`, `get_recipe`, `list_ingredients`, `list_tools`, `operation_log_recent`, `api_capabilities`
 - Additive write tools (`readOnlyHint=false`, `destructiveHint=false`): `create_recipe`, `create_ingredient`, `create_tool`
-- Mutating/destructive tools (`readOnlyHint=false`, `destructiveHint=true`): `update_recipe`, `delete_recipe`, `update_ingredient`, `delete_ingredient`, `update_tool`, `delete_tool`, `merge_ingredients`, `merge_tools`, `recategorize_recipes`, `update_tags_bulk`
+- Mutating/destructive tools (`readOnlyHint=false`, `destructiveHint=true`): `update_recipe`, `delete_recipe`, `update_ingredient`, `delete_ingredient`, `update_tool`, `delete_tool`, `merge_ingredients`, `merge_tools`, `recategorize_recipes`, `bulk_update_recipes`, `update_tags_bulk`
 
 In clients that support bulk approvals, this enables "always allow" for the read-only set while keeping mutating tools gated.
 

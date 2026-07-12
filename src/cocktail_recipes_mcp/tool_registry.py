@@ -175,6 +175,18 @@ def register_tools(mcp: Any, service: CocktailService, op_log: OperationLog) -> 
         return _run("recategorize_recipes", dry_run, _fn)
 
     @mcp.tool(annotations=mutating_write_annotations)
+    def bulk_update_recipes(
+        filters: dict[str, Any],
+        updates: dict[str, Any],
+        dry_run: bool = True,
+    ) -> dict[str, Any]:
+        return _run(
+            "bulk_update_recipes",
+            dry_run,
+            lambda: service.bulk_update_recipes(filters=filters, updates=updates, dry_run=dry_run),
+        )
+
+    @mcp.tool(annotations=mutating_write_annotations)
     def update_tags_bulk(
         recipe_ids: list[int],
         add_tags: list[str] | None = None,

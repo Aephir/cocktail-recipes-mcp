@@ -262,6 +262,48 @@ class CocktailService:
             idempotent=req.dry_run,
         )
 
+    def bulk_update_recipes(
+        self,
+        filters: dict[str, Any],
+        updates: dict[str, Any],
+        dry_run: bool = True,
+    ) -> dict[str, Any] | list[Any] | None:
+        payload = {
+            "dry_run": dry_run,
+            "filters": filters,
+            "updates": updates,
+        }
+        preview = {
+            "operation": "bulk_update_recipes",
+            "dry_run": dry_run,
+            "filters": filters,
+            "updates": updates,
+        }
+        if dry_run:
+            result = self._client.request(
+                "POST",
+                "/api/admin/recipes/bulk-update",
+                json=payload,
+                idempotent=True,
+            )
+            return {
+                "preview": preview,
+                "apply_executed": False,
+                "result": result,
+            }
+
+        result = self._client.request(
+            "POST",
+            "/api/admin/recipes/bulk-update",
+            json=payload,
+            idempotent=False,
+        )
+        return {
+            "preview": preview,
+            "apply_executed": True,
+            "result": result,
+        }
+
     def update_tags_bulk(self, req: BulkTagsRequest) -> dict[str, Any] | list[Any] | None:
         payload = req.model_dump(mode="json")
         return self._client.request(
@@ -289,6 +331,7 @@ class CocktailService:
             ("merge_ingredients", "OPTIONS", "/api/admin/ingredients/merge"),
             ("merge_tools", "OPTIONS", "/api/admin/tools/merge"),
             ("recategorize_recipes", "OPTIONS", "/api/admin/recipes/recategorize"),
+            ("bulk_update_recipes", "OPTIONS", "/api/admin/recipes/bulk-update"),
             ("update_tags_bulk", "OPTIONS", "/api/admin/recipes/tags/bulk"),
         ]
         out: list[dict[str, Any]] = []

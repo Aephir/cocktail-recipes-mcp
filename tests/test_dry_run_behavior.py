@@ -105,3 +105,23 @@ def test_delete_tool_force_applies_even_when_referenced() -> None:
 
     assert result["apply_executed"] is True
     assert any(call["method"] == "DELETE" and call["path"] == "/api/admin/tools/3" for call in fake.calls)
+
+
+def test_bulk_update_recipes_dry_run_and_apply_flags() -> None:
+    fake = FakeClient()
+    service = CocktailService(client=fake)
+
+    filters = {"apply_all": False, "recipe_ids": [1, 2]}
+    updates = {"tags_add": ["citrus"]}
+
+    preview = service.bulk_update_recipes(filters=filters, updates=updates, dry_run=True)
+    applied = service.bulk_update_recipes(filters=filters, updates=updates, dry_run=False)
+
+    assert preview["apply_executed"] is False
+    assert preview["preview"]["operation"] == "bulk_update_recipes"
+    assert fake.calls[0]["idempotent"] is True
+    assert fake.calls[0]["path"] == "/api/admin/recipes/bulk-update"
+
+    assert applied["apply_executed"] is True
+    assert fake.calls[1]["idempotent"] is False
+    assert fake.calls[1]["path"] == "/api/admin/recipes/bulk-update"
