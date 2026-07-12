@@ -84,9 +84,41 @@ def register_tools(mcp: Any, service: CocktailService, op_log: OperationLog) -> 
     def list_ingredients(limit: int = 250, offset: int = 0) -> dict[str, Any]:
         return _run("list_ingredients", None, lambda: service.list_ingredients(limit=limit, offset=offset))
 
+    @mcp.tool(annotations=additive_write_annotations)
+    def create_ingredient(name: str, dry_run: bool = True) -> dict[str, Any]:
+        return _run("create_ingredient", dry_run, lambda: service.create_ingredient(name=name, dry_run=dry_run))
+
+    @mcp.tool(annotations=mutating_write_annotations)
+    def update_ingredient(ingredient_id: int, name: str, dry_run: bool = True) -> dict[str, Any]:
+        return _run(
+            "update_ingredient",
+            dry_run,
+            lambda: service.update_ingredient(ingredient_id=ingredient_id, name=name, dry_run=dry_run),
+        )
+
+    @mcp.tool(annotations=mutating_write_annotations)
+    def delete_ingredient(ingredient_id: int, dry_run: bool = True, force: bool = False) -> dict[str, Any]:
+        return _run(
+            "delete_ingredient",
+            dry_run,
+            lambda: service.delete_ingredient(ingredient_id=ingredient_id, dry_run=dry_run, force=force),
+        )
+
     @mcp.tool(annotations=read_only_annotations)
     def list_tools(limit: int = 250, offset: int = 0) -> dict[str, Any]:
         return _run("list_tools", None, lambda: service.list_tools(limit=limit, offset=offset))
+
+    @mcp.tool(annotations=additive_write_annotations)
+    def create_tool(name: str, dry_run: bool = True) -> dict[str, Any]:
+        return _run("create_tool", dry_run, lambda: service.create_tool(name=name, dry_run=dry_run))
+
+    @mcp.tool(annotations=mutating_write_annotations)
+    def update_tool(tool_id: int, name: str, dry_run: bool = True) -> dict[str, Any]:
+        return _run("update_tool", dry_run, lambda: service.update_tool(tool_id=tool_id, name=name, dry_run=dry_run))
+
+    @mcp.tool(annotations=mutating_write_annotations)
+    def delete_tool(tool_id: int, dry_run: bool = True, force: bool = False) -> dict[str, Any]:
+        return _run("delete_tool", dry_run, lambda: service.delete_tool(tool_id=tool_id, dry_run=dry_run, force=force))
 
     @mcp.tool(annotations=mutating_write_annotations)
     def merge_ingredients(source_ids: list[int], target_id: int, dry_run: bool = True) -> dict[str, Any]:

@@ -24,7 +24,13 @@ This server is designed for Claude Desktop and other MCP clients. It authenticat
 - `update_recipe` (defaults `dry_run=true`)
 - `delete_recipe` (defaults `dry_run=true`)
 - `list_ingredients`
+- `create_ingredient` (defaults `dry_run=true`)
+- `update_ingredient` (defaults `dry_run=true`)
+- `delete_ingredient` (defaults `dry_run=true`, supports `force=true`)
 - `list_tools`
+- `create_tool` (defaults `dry_run=true`)
+- `update_tool` (defaults `dry_run=true`)
+- `delete_tool` (defaults `dry_run=true`, supports `force=true`)
 - `merge_ingredients` (`dry_run=true` default)
 - `merge_tools` (`dry_run=true` default)
 - `recategorize_recipes` (`dry_run=true` default)
@@ -45,13 +51,19 @@ Each destructive tool returns:
 
 If backend admin endpoints are not available yet, tool responses return structured `not_implemented` with an actionable message.
 
+Delete safeguards for ingredients/tools:
+
+- `delete_ingredient` and `delete_tool` perform a recipe-reference precheck.
+- If references are found, apply mode is blocked unless `force=true`.
+- Dry-run output includes reference count and sample impacted recipes for review.
+
 ## Tool Permission Hints
 
 This server publishes MCP tool annotations so clients can distinguish read-only tools from mutating tools for permission workflows.
 
 - Read-only tools (`readOnlyHint=true`): `list_recipes`, `get_recipe`, `list_ingredients`, `list_tools`, `operation_log_recent`, `api_capabilities`
-- Additive write tools (`readOnlyHint=false`, `destructiveHint=false`): `create_recipe`
-- Mutating/destructive tools (`readOnlyHint=false`, `destructiveHint=true`): `update_recipe`, `delete_recipe`, `merge_ingredients`, `merge_tools`, `recategorize_recipes`, `update_tags_bulk`
+- Additive write tools (`readOnlyHint=false`, `destructiveHint=false`): `create_recipe`, `create_ingredient`, `create_tool`
+- Mutating/destructive tools (`readOnlyHint=false`, `destructiveHint=true`): `update_recipe`, `delete_recipe`, `update_ingredient`, `delete_ingredient`, `update_tool`, `delete_tool`, `merge_ingredients`, `merge_tools`, `recategorize_recipes`, `update_tags_bulk`
 
 In clients that support bulk approvals, this enables "always allow" for the read-only set while keeping mutating tools gated.
 
