@@ -325,43 +325,6 @@ Expected quick checks:
 - `GET /.well-known/oauth-protected-resource` returns `200`
 - `GET /mcp` without token returns `401`
 
-### Example Portainer Stack Snippet
-
-```yaml
-services:
-  cocktail-recipes-mcp:
-    image: cocktail-recipes-mcp:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      COCKTAIL_API_BASE_URL: http://cocktail-app:3000
-      COCKTAIL_API_USERNAME: admin
-      COCKTAIL_API_PASSWORD: change-me
-      MCP_TRANSPORT: streamable-http
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: 8000
-      MCP_HTTP_PATH: /mcp
-      PUBLIC_BASE_URL: https://cocktail-mcp.example.com
-      AUTH_USERNAME: connector-admin
-      AUTH_PASSWORD: change-me
-      OAUTH_STORAGE_DIR: /data/oauth
-      OAUTH_STORAGE_HOST_DIR: /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
-    ports:
-      - "8000:8000"
-    volumes:
-      - /mnt/storage_1/docker/cocktail-recipes-mcp/oauth:/data/oauth
-    restart: unless-stopped
-    stdin_open: true
-    tty: true
-    networks:
-      - cocktail_net
-
-networks:
-  cocktail_net:
-    external: true
-```
-
 ### Go-Live Checklist
 
 1. MCP and app containers share a network.
