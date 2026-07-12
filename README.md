@@ -200,10 +200,10 @@ When both stacks share the same external Docker network (`cocktail_net`), use th
 | `MCP_HTTP_HOST` | `0.0.0.0` | Yes (remote Claude) | Container bind address. |
 | `MCP_HTTP_PORT` | `8000` | Yes (remote Claude) | Internal container port. |
 | `MCP_HTTP_PATH` | `/mcp` | Yes (remote Claude) | MCP endpoint path. |
-| `MCP_HTTP_PUBLISH_PORT` | `8000` | Yes (remote Claude) | Host-published port. |
+| `MCP_HTTP_PUBLISH_PORT` | `8011` | Yes (remote Claude) | Host-published port. |
 | `PUBLIC_BASE_URL` | `https://cocktail-mcp.example.com` | Yes (remote Claude) | Public HTTPS origin used by OAuth metadata. |
-| `AUTH_USERNAME` | `connector-admin` | Yes (remote Claude) | Login used on OAuth consent screen. |
-| `AUTH_PASSWORD` | `change-me` | Yes (remote Claude) | Password for the connector login above. |
+| `AUTH_USERNAME` | `connector-admin` | Yes (remote Claude) | Login used on OAuth consent screen. Set anything, then use the same when logging in from Claude |
+| `AUTH_PASSWORD` | `change-me` | Yes (remote Claude) | Password for the connector login above. Set anything, then use the same when logging in from Claude |
 | `OAUTH_STORAGE_DIR` | `/data/oauth` | Recommended | Keep as shown unless you changed image internals. |
 | `OAUTH_STORAGE_HOST_DIR` | `/mnt/storage_1/docker/cocktail-recipes-mcp/oauth` | Recommended | Host path for persisted OAuth keys/tokens. |
 
@@ -212,6 +212,42 @@ Then:
 1. Ensure the host path in `OAUTH_STORAGE_HOST_DIR` exists and is writable by Docker.
 2. Deploy/redeploy the stack in Portainer.
 3. In Claude, add a custom connector pointing to `https://<your-fqdn>/mcp`.
+
+### Portainer Error: `PermissionError: [Errno 13] Permission denied: '/data/oauth/jwt_signing_key.pem'`
+
+Cause:
+
+- The container runs as a non-root user (`appuser`).
+- The bind-mounted host directory from `OAUTH_STORAGE_HOST_DIR` is not writable by that user.
+
+Fix on the Docker host:
+
+1. Create the directory if needed:
+
+```bash
+sudo mkdir -p /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
+```
+
+2. Confirm container UID/GID for `appuser`:
+
+```bash
+docker run --rm --entrypoint sh cocktail-recipes-mcp:latest -c 'id -u appuser; id -g appuser'
+```
+
+3. Set ownership using that output. Example if UID is `100` and GID is `101`:
+
+```bash
+sudo chown -R 100:101 /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
+sudo chmod -R u+rwX,g+rwX /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
+```
+
+4. Redeploy the stack.
+
+Quick test fallback (not for long-term use):
+
+```bash
+sudo chmod -R 777 /mnt/storage_1/docker/cocktail-recipes-mcp/oauth
+```
 
 ### Portainer Error: `.env not found`
 
@@ -250,6 +286,78 @@ Resolution:
 For MCP client access:
 - Same LAN/VPN: `http://<host-ip>:<published-port><MCP_HTTP_PATH>`
 - Internet-facing: put SWAG/Nginx in front and use `https://<fqdn><MCP_HTTP_PATH>`
+
+### SWAG Nginx Config (Redacted Template)
+
+Use this as a template for SWAG when proxying to an MCP host IP and published port.
+Replace placeholder values with your own environment values.
+
+```nginx
+# /config/nginx/site-confs/cocktail-mcp.conf
+
+server {
+  listen 443 ssl http2;
+  server_name mcp.example.com;
+
+  include /config/nginx/ssl.conf;
+  include /config/nginx/proxy.conf;
+
+  client_max_body_size 0;
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "no-referrer" always;
+
+  # SWAG not on shared Docker network: use MCP host IP + published port.
+  set $mcp_upstream http://192.168.1.50:8011;
+
+  # OAuth discovery endpoints + JWKS
+  location ~ ^/\.well-known/(oauth-authorization-server|oauth-protected-resource|jwks\.json)$ {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Authorization $http_authorization;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_read_timeout 3600;
+    proxy_send_timeout 3600;
+    proxy_pass $mcp_upstream;
+  }
+
+  # MCP and OAuth flow endpoints
+  location ~ ^/(mcp|register|authorize|token|oauth/login|oauth/consent)$ {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Authorization $http_authorization;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_read_timeout 3600;
+    proxy_send_timeout 3600;
+    proxy_pass $mcp_upstream;
+  }
+
+  location = /healthz {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_pass $mcp_upstream/healthz;
+  }
+
+  location / {
+    return 404;
+  }
+}
+```
+
+Expected quick checks:
+
+- `GET /.well-known/oauth-authorization-server` returns `200`
+- `GET /.well-known/oauth-protected-resource` returns `200`
+- `GET /mcp` without token returns `401`
 
 ### Go-Live Checklist
 

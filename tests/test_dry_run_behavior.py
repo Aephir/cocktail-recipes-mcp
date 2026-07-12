@@ -50,7 +50,6 @@ def test_merge_ingredients_dry_run_and_apply_flags() -> None:
     assert fake.calls[1]["idempotent"] is False
     assert fake.calls[1]["json"]["dry_run"] is False
 
-
 def test_merge_ingredients_contract_sends_source_ids_list() -> None:
     fake = FakeClient()
     service = CocktailService(client=fake)

@@ -453,6 +453,7 @@ def _recipe_contains_reference(recipe: dict[str, Any], *, entity_key: str, entit
     return False
 
 
+
 def _extract_recipe(payload: dict[str, Any] | list[Any] | None) -> dict[str, Any]:
     if isinstance(payload, dict):
         for key in ("recipe", "data", "item"):
