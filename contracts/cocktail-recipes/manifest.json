@@ -180,9 +180,9 @@
   "files": {
     "README.md": "4b215b139225bda6c21d2fa2011015642b5756c1dc30a629e4fc165151bb0932",
     "VERSION": "1f2110568627307becae713f8b808f3d9d912d4b2a24ed6a78605f03f7437d3c",
-    "app.py": "28deb916563caf8a249653c54344cd3fd2b8a4c683a34eda0dc4250956d79837"
+    "app.py": "078bfdba66338798d84e83f466d50329f14d65f33a9b04e9bb04ce813a9fd80a"
   },
-  "generated_at": "2026-07-12T18:33:05.577580+00:00",
+  "generated_at": "2026-07-13T08:34:56.809922+00:00",
   "mcp_capabilities": {
     "dry_run_mutations": true,
     "ingredient_merge": true,
