@@ -165,7 +165,16 @@ class CocktailService:
                 "reason": "Ingredient is referenced by recipes. Re-run with force=true only after review.",
             }
 
-        result = self._client.request("DELETE", f"/api/admin/ingredients/{ingredient_id}", idempotent=False)
+        # Send flags in both params and JSON to accommodate backends that only
+        # read one transport style for DELETE payloads.
+        apply_flags = {"dry_run": False, "force": force}
+        result = self._client.request(
+            "DELETE",
+            f"/api/admin/ingredients/{ingredient_id}",
+            params=apply_flags,
+            json=apply_flags,
+            idempotent=False,
+        )
         _assert_apply_executed(operation="delete_ingredient", dry_run=dry_run, result=result)
         return {
             "preview": preview,
@@ -239,7 +248,16 @@ class CocktailService:
                 "reason": "Tool is referenced by recipes. Re-run with force=true only after review.",
             }
 
-        result = self._client.request("DELETE", f"/api/admin/tools/{tool_id}", idempotent=False)
+        # Send flags in both params and JSON to accommodate backends that only
+        # read one transport style for DELETE payloads.
+        apply_flags = {"dry_run": False, "force": force}
+        result = self._client.request(
+            "DELETE",
+            f"/api/admin/tools/{tool_id}",
+            params=apply_flags,
+            json=apply_flags,
+            idempotent=False,
+        )
         _assert_apply_executed(operation="delete_tool", dry_run=dry_run, result=result)
         return {
             "preview": preview,

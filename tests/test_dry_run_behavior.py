@@ -128,7 +128,23 @@ def test_delete_tool_force_applies_even_when_referenced() -> None:
     result = service.delete_tool(tool_id=3, dry_run=False, force=True)
 
     assert result["apply_executed"] is True
-    assert any(call["method"] == "DELETE" and call["path"] == "/api/admin/tools/3" for call in fake.calls)
+    delete_call = next(call for call in fake.calls if call["method"] == "DELETE")
+    assert delete_call["path"] == "/api/admin/tools/3"
+    assert delete_call["params"] == {"dry_run": False, "force": True}
+    assert delete_call["json"] == {"dry_run": False, "force": True}
+
+
+def test_delete_ingredient_apply_sends_dry_run_false_and_force() -> None:
+    fake = FakeClient()
+    service = CocktailService(client=fake)
+
+    result = service.delete_ingredient(ingredient_id=7, dry_run=False, force=False)
+
+    assert result["apply_executed"] is True
+    delete_call = next(call for call in fake.calls if call["method"] == "DELETE")
+    assert delete_call["path"] == "/api/admin/ingredients/7"
+    assert delete_call["params"] == {"dry_run": False, "force": False}
+    assert delete_call["json"] == {"dry_run": False, "force": False}
 
 
 def test_bulk_update_recipes_dry_run_and_apply_flags() -> None:
@@ -177,6 +193,22 @@ def test_apply_errors_when_backend_reports_no_changes() -> None:
 
     with pytest.raises(ApiError, match="no changed rows"):
         service.merge_tools(MergeRequest(source_ids=[1], target_id=2, dry_run=False))
+
+
+def test_delete_apply_errors_when_backend_reports_dry_run_true() -> None:
+    class DryRunDeleteClient(FakeClient):
+        def request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any] | list[Any]:
+            self.calls.append({"method": method, "path": path, **kwargs})
+            if method == "GET" and path == "/api/recipes":
+                return []
+            if method == "DELETE" and path == "/api/admin/tools/3":
+                return {"dry_run": True, "apply_executed": True}
+            return {"ok": True}
+
+    service = CocktailService(client=DryRunDeleteClient())
+
+    with pytest.raises(ApiError, match="dry_run=true"):
+        service.delete_tool(tool_id=3, dry_run=False, force=False)
 
 
 def test_update_recipe_apply_fetches_and_preserves_omitted_lists() -> None:
