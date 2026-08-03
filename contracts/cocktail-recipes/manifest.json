@@ -178,11 +178,11 @@
     }
   ],
   "files": {
-    "README.md": "aeb7cddad13ed2355251b723fd92615baf120b2eb274dbf296877a0bb2e06367",
+    "README.md": "1955e48384178f8bd8860ae3e145c33a820acf6c184e0cbd0c12fceb921d8fea",
     "VERSION": "1f2110568627307becae713f8b808f3d9d912d4b2a24ed6a78605f03f7437d3c",
-    "app.py": "3e9221e2eb2b0234abaa8bc2a41f0ebc33a3854d02c2506cda69174372ba1d87"
+    "app.py": "745e22ccb84989639602a5208da611e7c39371e201d15c6453e9cd5b56a2c054"
   },
-  "generated_at": "2026-08-03T18:10:27.794829+00:00",
+  "generated_at": "2026-08-03T18:44:48.616946+00:00",
   "mcp_capabilities": {
     "dry_run_mutations": true,
     "ingredient_merge": true,
